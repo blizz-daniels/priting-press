@@ -1,6 +1,11 @@
 (() => {
   const glow = document.querySelector(".cursor-glow");
-  const hoverSections = document.querySelectorAll(".hero, .workspace, .portfolio");
+  const revealGroups = [
+    { selector: ".hero-copy, .hero-card", stagger: 120 },
+    { selector: ".about-panel, .section-heading, .contact-panel", stagger: 90 },
+    { selector: ".service-card, .workspace-card, .portfolio-card, .value-card", stagger: 80 },
+    { selector: ".footer", stagger: 0 },
+  ];
 
   if (glow) {
     const moveGlow = (event) => {
@@ -18,24 +23,45 @@
     window.addEventListener("pointerleave", softenGlow);
   }
 
-  if (!hoverSections.length || !window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+  const revealTargets = [];
+  revealGroups.forEach(({ selector, stagger }) => {
+    document.querySelectorAll(selector).forEach((element, index) => {
+      element.classList.add("reveal");
+      element.style.setProperty("--reveal-delay", `${index * stagger}ms`);
+      revealTargets.push(element);
+    });
+  });
+
+  if (!revealTargets.length) {
     return;
   }
 
-  const clearHoverState = (section) => {
-    section.classList.remove("is-image-hovering");
+  const revealNow = (element) => {
+    element.classList.add("is-visible");
   };
 
-  hoverSections.forEach((section) => {
-    let resetTimer = null;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || !("IntersectionObserver" in window)) {
+    revealTargets.forEach(revealNow);
+    return;
+  }
 
-    section.addEventListener("pointerenter", () => {
-      window.clearTimeout(resetTimer);
-      section.classList.add("is-image-hovering");
-    });
+  const observer = new IntersectionObserver(
+    (entries, obs) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) {
+          return;
+        }
 
-    section.addEventListener("pointerleave", () => {
-      resetTimer = window.setTimeout(() => clearHoverState(section), 60);
-    });
-  });
+        revealNow(entry.target);
+        obs.unobserve(entry.target);
+      });
+    },
+    {
+      root: null,
+      threshold: 0.16,
+      rootMargin: "0px 0px -8% 0px",
+    }
+  );
+
+  revealTargets.forEach((element) => observer.observe(element));
 })();
